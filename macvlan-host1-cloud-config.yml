@@ -71,12 +71,12 @@ coreos:
         Description=macvlan-test machine
 
         [Service]
-        ExecStartPre=/usr/bin/docker pull debian
+        ExecStartPre=/usr/bin/docker pull voobscout/tshark
         ExecStartPre=/usr/bin/docker run -d -ti \
         --name tshark \
         --privileged \
         --net host \
-        debian:jessie-backports /bin/bash -l -c "apt update && apt-get -qqfy install tshark && tshark -i eth1"
+        voobscout/tshark
         ExecStart=/usr/bin/docker logs -f tshark
         ExecStop=/usr/bin/docker stop tshark
         ExecStop=/usr/bin/docker rm tshark
