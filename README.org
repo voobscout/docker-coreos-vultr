@@ -1,5 +1,13 @@
 * Docker issue #31995
   https://github.com/docker/docker/issues/31995
 
-  The simple way to reproduce it is to clone this repo, change ssh keys and boot 2 kvm instances from provided ipxe files.
+  The simplest way to reproduce the issue is to clone this repo, change ssh keys and boot 2 kvm instances from provided ipxe files.
   I use vultr.com to accomplish this.
+
+  #+BEGIN_SRC shell :results drawer :noweb yes
+    ssh core@host0.njk.li docker exec macvlan-test ping -c 3 10.99.0.220
+  #+END_SRC
+
+  #+BEGIN_SRC shell :results drawer
+    ssh core@host1.njk.li docker logs tshark
+  #+END_SRC
