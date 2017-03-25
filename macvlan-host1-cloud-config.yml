@@ -1,0 +1,99 @@
+#cloud-config
+---
+coreos:
+  update:
+    group: stable
+    reboot-strategy: best-effort
+  units:
+    - name: 00-eth1-static.network
+      runtime: true
+      content: |
+        [Match]
+        Name=eth1
+
+        [Network]
+        DHCP=no
+        Address=10.99.0.220/24
+
+    - name: custom-mtu.service
+      command: start
+      content: |
+        [Unit]
+        Before=docker.service
+
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        ExecStart=/usr/bin/ip link set dev eth1 mtu 1450
+
+    - name: format-ephemeral.service
+      command: start
+      content: |
+        [Unit]
+        Description=Formats the ephemeral drive
+        After=dev-vda.device
+        Requires=dev-vda.device
+
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        ExecStart=/usr/sbin/wipefs -f /dev/vda
+        ExecStart=/usr/sbin/mkfs.ext4 -F /dev/vda
+
+    - name: var-lib-docker.mount
+      command: start
+      content: |
+        [Unit]
+        Description=bind mount /var/lib/docker to ephemeral
+        Requires=rbind-mount-points.service
+        After=rbind-mount-points.service
+
+        [Mount]
+        What=/dev/vda
+        Where=/var/lib/docker
+        Type=ext4
+
+    - name: docker.service
+      drop-ins:
+        - name: 10-wait-mount.conf
+          content: |
+            [Unit]
+            After=var-lib-docker.mount
+            Requires=var-lib-docker.mount
+
+    - name: tshark.service
+      enable: true
+      command: start
+      content: |
+        [Unit]
+        After=docker.service
+        Requires=docker.service
+        Description=macvlan-test machine
+
+        [Service]
+        ExecStartPre=/usr/bin/docker pull debian
+        ExecStartPre=/usr/bin/docker run -d -ti \
+        --name tshark \
+        --privileged \
+        --net host \
+        debian:jessie-backports /bin/bash -l -c "apt update && apt-get -qqfy install tshark && tshark -i eth1"
+        ExecStart=/usr/bin/docker logs -f tshark
+        ExecStop=/usr/bin/docker stop tshark
+        ExecStop=/usr/bin/docker rm tshark
+        Restart=on-failure
+        RestartSec=30s
+
+        [Install]
+        WantedBy=multi-user.target
+
+write_files:
+  - path: /run/flannel/flannel_docker_opts.env
+    permissions: 0644
+    owner: 'root:root'
+    content: |
+      DOCKER_OPTS='--bip 172.22.0.1/16 --fixed-cidr 172.22.0.1/16'
+
+hostname: "macvlan-host1"
+
+ssh_authorized_keys:
+  - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDUKXJgShJMrBFi6VvKCsCJO9c1wLA3ugL3LAJGsRO9KXdZGmLC74/s0KVw4uaWHoTz91qLPdnplSdLU3KDK7loIdKRBR8E4KJ1MiZKGIj7F9NsniiNetQkKvUazrhRx8nFOAYSPD4znkhrh53nXnsI2WDACt0CGNYX33hV3J/kblWYit/wcIEtJg1ivFmBrljtAMZpS2mBpAK0kySCY2BP+Ph8x+6EuCkH1w2J4Moa0fYkibF3K7O4cmcWAtD53eyr8YN4JKvAwTe+uXVsdFDUNkZvCdOLTDDRd7t7C+qL3nbJMv5jVoED0bBBfn7NfEfyqLOzXHmE4bfuMo7KBlH7 vod@agrajag.0.njk.li"

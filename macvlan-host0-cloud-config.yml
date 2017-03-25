@@ -1,0 +1,121 @@
+#cloud-config
+---
+coreos:
+  update:
+    group: stable
+    reboot-strategy: best-effort
+  units:
+    - name: 00-eth1-static.network
+      runtime: true
+      content: |
+        [Match]
+        Name=eth1
+
+        [Network]
+        DHCP=no
+        Address=10.99.0.254/24
+
+    - name: custom-mtu.service
+      command: start
+      content: |
+        [Unit]
+        Before=docker.service
+
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        ExecStart=/usr/bin/ip link set dev eth1 mtu 1450
+
+    - name: format-ephemeral.service
+      command: start
+      content: |
+        [Unit]
+        Description=Formats the ephemeral drive
+        After=dev-vda.device
+        Requires=dev-vda.device
+
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        ExecStart=/usr/sbin/wipefs -f /dev/vda
+        ExecStart=/usr/sbin/mkfs.ext4 -F /dev/vda
+
+    - name: var-lib-docker.mount
+      command: start
+      content: |
+        [Unit]
+        Description=bind mount /var/lib/docker to ephemeral
+        Requires=rbind-mount-points.service
+        After=rbind-mount-points.service
+
+        [Mount]
+        What=/dev/vda
+        Where=/var/lib/docker
+        Type=ext4
+
+    - name: docker.service
+      drop-ins:
+        - name: 10-wait-mount.conf
+          content: |
+            [Unit]
+            After=var-lib-docker.mount
+            Requires=var-lib-docker.mount
+
+    - name: bridge-management-eth1.service
+      enable: true
+      command: start
+      content: |
+        [Unit]
+        After=docker.service
+        Requires=docker.service
+        Description=Create additional docker network and bridge eth1 into it
+
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        ExecStart=/usr/bin/docker network create --driver macvlan \
+        --subnet 10.99.0.0/24 \
+        --gateway 10.99.0.1 \
+        -o parent=eth1 \
+        management
+
+    - name: macvlan-test.service
+      enable: true
+      command: start
+      content: |
+        [Unit]
+        After=bridge-management-eth1.service
+        Requires=bridge-management-eth1.service
+        Description=macvlan-test machine
+
+        [Service]
+        ExecStartPre=/usr/bin/docker pull debian
+        ExecStartPre=/usr/bin/docker create -ti \
+        --name macvlan-test \
+        --cap-add NET_ADMIN \
+        --cap-add NET_RAW \
+        --cap-add NET_BROADCAST \
+        --net default \
+        debian:jessie-backports /bin/bash -l
+        ExecStartPre=/usr/bin/docker network connect --ip 10.99.0.100 management macvlan-test
+        ExecStartPre=/usr/bin/docker start macvlan-test
+        ExecStart=/usr/bin/docker logs -f macvlan-test
+        ExecStop=/usr/bin/docker stop macvlan-test
+        ExecStop=/usr/bin/docker rm macvlan-test
+        Restart=on-failure
+        RestartSec=30s
+
+        [Install]
+        WantedBy=multi-user.target
+
+write_files:
+  - path: /run/flannel/flannel_docker_opts.env
+    permissions: 0644
+    owner: 'root:root'
+    content: |
+      DOCKER_OPTS='--bip 172.20.0.1/16 --fixed-cidr 172.20.0.1/16'
+
+hostname: "macvlan-host0"
+
+ssh_authorized_keys:
+  - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDUKXJgShJMrBFi6VvKCsCJO9c1wLA3ugL3LAJGsRO9KXdZGmLC74/s0KVw4uaWHoTz91qLPdnplSdLU3KDK7loIdKRBR8E4KJ1MiZKGIj7F9NsniiNetQkKvUazrhRx8nFOAYSPD4znkhrh53nXnsI2WDACt0CGNYX33hV3J/kblWYit/wcIEtJg1ivFmBrljtAMZpS2mBpAK0kySCY2BP+Ph8x+6EuCkH1w2J4Moa0fYkibF3K7O4cmcWAtD53eyr8YN4JKvAwTe+uXVsdFDUNkZvCdOLTDDRd7t7C+qL3nbJMv5jVoED0bBBfn7NfEfyqLOzXHmE4bfuMo7KBlH7 vod@agrajag.0.njk.li"

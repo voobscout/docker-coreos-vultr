@@ -1,0 +1,12 @@
+#!ipxe
+# -*- conf-space -*-
+
+set base-url http://stable.release.core-os.net/amd64-usr/current
+set kernel-url ${base-url}/coreos_production_pxe.vmlinuz
+set initrd-url ${base-url}/coreos_production_pxe_image.cpio.gz
+
+set cloud-cfg-url https://raw.githubusercontent.com/voobscout/docker-coreos-vultr/master/macvlan-host0-cloud-config.yml
+
+kernel ${kernel-url} cloud-config-url=${cloud-cfg-url}
+initrd ${initrd-url}
+boot
