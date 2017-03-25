@@ -45,8 +45,8 @@ coreos:
       content: |
         [Unit]
         Description=bind mount /var/lib/docker to ephemeral
-        Requires=rbind-mount-points.service
-        After=rbind-mount-points.service
+        Requires=format-ephemeral.service
+        After=format-ephemeral.service
 
         [Mount]
         What=/dev/vda
