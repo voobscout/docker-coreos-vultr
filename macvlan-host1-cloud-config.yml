@@ -68,15 +68,15 @@ coreos:
         [Unit]
         After=docker.service
         Requires=docker.service
-        Description=macvlan-test machine
+        Description=tshark machine
 
         [Service]
-        ExecStartPre=/usr/bin/docker pull voobscout/tshark
+        ExecStartPre=/usr/bin/docker pull voobscout/docker-coreos-vultr
         ExecStartPre=/usr/bin/docker run -d -ti \
         --name tshark \
         --privileged \
         --net host \
-        voobscout/tshark
+        voobscout/docker-coreos-vultr
         ExecStart=/usr/bin/docker logs -f tshark
         ExecStop=/usr/bin/docker stop tshark
         ExecStop=/usr/bin/docker rm tshark
