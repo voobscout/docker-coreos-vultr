@@ -91,7 +91,7 @@ write_files:
     permissions: 0644
     owner: 'root:root'
     content: |
-      DOCKER_OPTS='--bip 172.22.0.1/16 --fixed-cidr 172.22.0.1/16'
+      DOCKER_OPTS='--experimental --bip 172.22.0.1/16 --fixed-cidr 172.22.0.1/16'
 
 hostname: "macvlan-host1"
 
