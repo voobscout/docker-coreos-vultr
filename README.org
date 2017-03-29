@@ -1,20 +1,30 @@
 * Vultr.com - MACVLAN bridging issue
-** Easy to reproduce from this repo.
-*** Originally submitted as Docker issue [[https://github.com/docker/docker/issues/31995][#31995]]
 
+  |-------------------------------+------------------------------+---------------------|
+  | host0                         | vultr bridge                 | host1               |
+  |                               | (private network)            |                     |
+  |-------------------------------+------------------------------+---------------------|
+  | CoreOS                        |                              | CoreOS              |
+  |                               |                              |                     |
+  | eth1 10.99.0.254/24           | <- proper connectivity ->    | eth1 10.99.0.220/24 |
+  |                               |                              |                     |
+  |                               |                              |                     |
+  | Docker MACVLAN 10.99.0.100/24 | <-X no connectivity  X->     |                     |
+  |                               | <-X visible arp traffic  X-> |                     |
+  |-------------------------------+------------------------------+---------------------|
 
-After booting this config on my local KVM and seeing it work perfectly, it was obvious that
-
-Docker issue #31995
-  https://github.com/docker/docker/issues/31995
-
-  The simplest way to reproduce the issue is to clone this repo, change ssh keys and boot 2 kvm instances from provided ipxe files.
-  I use vultr.com to accomplish this.
+* How to reproduce:
+  1. Clone this repo and alter ssh keys.
+  2. Boot a couple of instances with private network in the same region, use host0.ipxe and host1.ipxe respectively, ie:
 
   #+BEGIN_SRC shell :results drawer :noweb yes
-    ssh core@host0.njk.li docker exec macvlan-test ping -c 3 10.99.0.220
+    ssh core@host0 docker exec macvlan-test ping -c 3 10.99.0.220
   #+END_SRC
 
   #+BEGIN_SRC shell :results drawer
-    ssh core@host1.njk.li docker logs tshark
+    ssh core@host1 docker logs tshark
   #+END_SRC
+
+* Notes
+  Originally submitted as Docker issue [[https://github.com/docker/docker/issues/31995][#31995]]
+  After booting this config on my local KVM and seeing it work perfectly, it was obvious that docker / coreOS has nothing to do with it.
