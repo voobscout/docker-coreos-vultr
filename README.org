@@ -1,4 +1,11 @@
-* Docker issue #31995
+* Vultr.com - MACVLAN bridging issue
+** Easy to reproduce from this repo.
+*** Originally submitted as Docker issue [[https://github.com/docker/docker/issues/31995][#31995]]
+
+
+After booting this config on my local KVM and seeing it work perfectly, it was obvious that
+
+Docker issue #31995
   https://github.com/docker/docker/issues/31995
 
   The simplest way to reproduce the issue is to clone this repo, change ssh keys and boot 2 kvm instances from provided ipxe files.
