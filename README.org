@@ -1,5 +1,5 @@
 * vultr.com macvlan bridging issue
-  Originally it was submitted as [Docker issue #31995](https://github.com/docker/docker/issues/31995)
+  Originally it was submitted as [[[https://github.com/docker/docker/issues/31995][Docker issue #31995]]]
 
   The simplest way to reproduce the issue is to clone this repo, change ssh keys and boot 2 kvm instances from provided ipxe files.
   I use vultr.com to accomplish this.
